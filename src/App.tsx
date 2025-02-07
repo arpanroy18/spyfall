@@ -4,38 +4,43 @@ import { PlayerCard } from './components/PlayerCard';
 import { LandingPage } from './components/LandingPage';
 import { RoleInfo } from './components/RoleInfo';
 import { EndGameDialog } from './components/EndGameDialog';
+import { KickDialog } from './components/KickDialog';
 import { Player, GameState, COUNTRIES, GameConfig } from './types';
-import { MapPin, Users, Crown, AlertCircle, XCircle } from 'lucide-react';
+import { MapPin, Users, Crown, AlertCircle, XCircle, ArrowLeft, UserX } from 'lucide-react';
 import { ref, set, get, onValue, off } from 'firebase/database';
 import { db } from './firebase';
 
-// Add helper function before App component
 const createTestPlayer = (name: string, isLeader: boolean = false): Player => ({
   id: crypto.randomUUID(),
   name,
   isLeader,
-  score: 0
+  score: 0,
+  isSpy: false
 });
 
-function App() {
-  const [gameState, setGameState] = useState<GameState>({
-    id: '',
-    isPlaying: false,
-    timeRemaining: 480,
-    players: [],
-    votes: {},
-    config: {
-      numSpies: 1,
-      timeLimit: 480,
-      country: 'Canada' // Default to Canada
-    }
-  });
+const initialGameState: GameState = {
+  id: '',
+  isPlaying: false,
+  timeRemaining: 480,
+  players: [],
+  votes: {},
+  config: {
+    numSpies: 1,
+    timeLimit: 480,
+    country: 'Canada'
+  },
+  currentTurn: null
+};
 
+function App() {
+  const [gameState, setGameState] = useState<GameState>(initialGameState);
   const [playerName, setPlayerName] = useState('');
   const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
   const [showLobby, setShowLobby] = useState(false);
   const [showEndGameDialog, setShowEndGameDialog] = useState(false);
+  const [showKickDialog, setShowKickDialog] = useState(false);
   const [nameError, setNameError] = useState<string>('');
+  const [joiningCode, setJoiningCode] = useState<string>('');
 
   useEffect(() => {
     if (gameState.isPlaying && gameState.timeRemaining > 0) {
@@ -49,34 +54,39 @@ function App() {
     }
   }, [gameState.isPlaying, gameState.timeRemaining]);
 
-  const handleCreateGame = async (config: GameConfig) => {
+  const handleCreateGame = async (config: GameConfig, creatorName: string) => {
     const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const testPlayers = [
-      createTestPlayer("TestHost", true),
-      createTestPlayer("TestPlayer2"),
-      createTestPlayer("TestPlayer3")
-    ];
     
-    const newGameState = {
-      id: gameId,
-      config: config,
-      timeRemaining: config.timeLimit,
-      players: testPlayers,
-      isPlaying: false,
-      votes: {},
+    const leaderPlayer: Player = {
+      id: crypto.randomUUID(),
+      name: creatorName,
+      isLeader: true,
+      score: 0,
+      isSpy: false
     };
 
-    // Save to Firebase
+    const newGameState: GameState = {
+      id: gameId,
+      config: {
+        ...config,
+        country: config.country || 'Canada'
+      },
+      timeRemaining: config.timeLimit,
+      players: [leaderPlayer],
+      isPlaying: false,
+      votes: {},
+      currentTurn: null
+    };
+
     await set(ref(db, `games/${gameId}`), newGameState);
     
     setGameState(newGameState);
-    setCurrentPlayer(testPlayers[0]);
+    setCurrentPlayer(leaderPlayer);
     setShowLobby(true);
   };
 
   const handleJoinGame = async (code: string) => {
     try {
-      // Check if game exists
       const gameRef = ref(db, `games/${code}`);
       const snapshot = await get(gameRef);
       
@@ -85,18 +95,17 @@ function App() {
         return;
       }
 
-      // Subscribe to game updates
-      onValue(gameRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          setGameState(data);
-        }
-      });
+      const gameData = snapshot.val();
+      const validatedGameState: GameState = {
+        ...initialGameState,
+        ...gameData,
+        players: gameData.players || [],
+        votes: gameData.votes || {},
+        currentTurn: gameData.currentTurn || null
+      };
 
-      setGameState(prev => ({
-        ...prev,
-        id: code
-      }));
+      setJoiningCode(code);
+      setGameState(validatedGameState);
       setShowLobby(true);
     } catch (error) {
       setNameError('Error joining game');
@@ -104,81 +113,149 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    // Cleanup Firebase listeners when component unmounts
-    return () => {
-      if (gameState.id) {
-        const gameRef = ref(db, `games/${gameState.id}`);
-        off(gameRef);
+  const handleLeaveLobby = async () => {
+    if (currentPlayer && gameState.id) {
+      const updatedPlayers = gameState.players.filter(p => p.id !== currentPlayer.id);
+      
+      // If the leaving player was the leader, assign leadership to the next player
+      if (currentPlayer.isLeader && updatedPlayers.length > 0) {
+        const newLeader = { ...updatedPlayers[0], isLeader: true };
+        updatedPlayers[0] = newLeader;
       }
-    };
-  }, [gameState.id]);
 
-  // Update Firebase whenever game state changes
-  useEffect(() => {
-    if (gameState.id && showLobby) {
-      set(ref(db, `games/${gameState.id}`), gameState);
+      // Update the entire game state to ensure leadership changes are properly propagated
+      const updatedGameState = {
+        ...gameState,
+        players: updatedPlayers
+      };
+
+      // Update the entire game state in Firebase
+      await set(ref(db, `games/${gameState.id}`), updatedGameState);
+
+      setGameState(initialGameState);
+      setCurrentPlayer(null);
+      setShowLobby(false);
+      setNameError('');
+      setJoiningCode('');
+    } else {
+      setShowLobby(false);
+      setGameState(initialGameState);
+      setJoiningCode('');
     }
-  }, [gameState, showLobby]);
+  };
 
-  const handleJoinLobby = () => {
-    // First check if already joined
-    if (currentPlayer) {
-      setNameError('You are already in this game');
+  const handleKickPlayer = async (playerId: string) => {
+    if (!currentPlayer?.isLeader || !gameState.id) return;
+
+    const updatedPlayers = gameState.players.filter(p => p.id !== playerId);
+    const updatedGameState = {
+      ...gameState,
+      players: updatedPlayers
+    };
+
+    await set(ref(db, `games/${gameState.id}`), updatedGameState);
+  };
+
+  useEffect(() => {
+    if (gameState.id) {
+      const gameRef = ref(db, `games/${gameState.id}`);
+      const unsubscribe = onValue(gameRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          // Check if current player was kicked
+          if (currentPlayer && !data.players?.some((p: Player) => p.id === currentPlayer.id)) {
+            // Player was kicked, show kick dialog
+            setShowKickDialog(true);
+            return;
+          }
+
+          setGameState(prev => ({
+            ...prev,
+            ...data,
+            players: data.players || [],
+            votes: data.votes || {},
+            currentTurn: data.currentTurn || null
+          }));
+        }
+      });
+
+      return () => {
+        off(gameRef);
+      };
+    }
+  }, [gameState.id, currentPlayer]);
+
+  const handleKickDialogClose = () => {
+    setShowKickDialog(false);
+    setShowLobby(false);
+    setGameState(initialGameState);
+    setCurrentPlayer(null);
+    setJoiningCode('');
+  };
+
+  const handleJoinLobby = async () => {
+    const trimmedName = playerName.trim();
+    if (!trimmedName) {
+      setNameError('Please enter your name');
       return;
     }
 
-    const trimmedName = playerName.trim();
-    if (trimmedName) {
-      // Check for duplicate name
-      const isDuplicateName = gameState.players.some(
-        player => player.name.toLowerCase() === trimmedName.toLowerCase()
-      );
+    const isDuplicateName = gameState.players.some(
+      player => player.name.toLowerCase() === trimmedName.toLowerCase()
+    );
 
-      if (isDuplicateName) {
-        setNameError('This name is already taken');
-        return;
-      }
+    if (isDuplicateName) {
+      setNameError('This name is already taken');
+      return;
+    }
 
-      const newPlayer: Player = {
-        id: crypto.randomUUID(),
-        name: trimmedName,
-        isLeader: gameState.players.length === 0,
-        score: 0
-      };
+    const newPlayer: Player = {
+      id: crypto.randomUUID(),
+      name: trimmedName,
+      isLeader: gameState.players.length === 0,
+      score: 0,
+      isSpy: false
+    };
 
-      setCurrentPlayer(newPlayer);
-      setGameState(prev => ({
-        ...prev,
-        players: [...prev.players, newPlayer]
-      }));
-      setPlayerName('');
-      setNameError(''); // Clear any existing error
+    const updatedPlayers = [...gameState.players, newPlayer];
+    await set(ref(db, `games/${gameState.id}/players`), updatedPlayers);
+
+    setCurrentPlayer(newPlayer);
+    setPlayerName('');
+    setNameError('');
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && playerName.trim()) {
+      handleJoinLobby();
     }
   };
 
-  const endGame = () => {
-    setShowEndGameDialog(false);
-    setGameState(prev => ({
-      ...prev,
-      isPlaying: false,
-      timeRemaining: prev.config.timeLimit,
-      location: undefined,
-      currentTurn: undefined,
-      votingFor: undefined,
-      votes: {},
-      players: prev.players.map(player => ({
-        ...player,
-        isSpy: undefined
-      }))
-    }));
+  const endGame = async () => {
+    if (gameState.id) {
+      const updatedState = {
+        ...gameState,
+        isPlaying: false,
+        timeRemaining: gameState.config.timeLimit,
+        location: null,
+        currentTurn: null,
+        votingFor: null,
+        votes: {},
+        players: gameState.players.map(player => ({
+          ...player,
+          isSpy: false
+        }))
+      };
+
+      await set(ref(db, `games/${gameState.id}`), updatedState);
+      setShowEndGameDialog(false);
+    }
   };
 
-  const startGame = () => {
+  const startGame = async () => {
     const countryLocations = COUNTRIES[gameState.config.country as keyof typeof COUNTRIES];
     const randomLocation = countryLocations[Math.floor(Math.random() * countryLocations.length)];
     
-    // Randomly select spies
     const playerIndices = Array.from({ length: gameState.players.length }, (_, i) => i);
     const spyIndices = new Set<number>();
     
@@ -188,19 +265,22 @@ function App() {
       playerIndices.splice(randomIndex, 1);
     }
     
-    setGameState(prev => ({
-      ...prev,
+    const firstTurnPlayerId = gameState.players.find(p => p.isLeader)?.id || gameState.players[0]?.id || null;
+    
+    const updatedState = {
+      ...gameState,
       isPlaying: true,
       location: randomLocation,
-      timeRemaining: prev.config.timeLimit,
-      players: prev.players.map((player, index) => ({
+      timeRemaining: gameState.config.timeLimit,
+      players: gameState.players.map((player, index) => ({
         ...player,
         isSpy: spyIndices.has(index)
       })),
-      currentTurn: prev.players.find(p => p.isLeader)?.id
-    }));
+      currentTurn: firstTurnPlayerId
+    };
 
-    // Update current player's role
+    await set(ref(db, `games/${gameState.id}`), updatedState);
+
     if (currentPlayer) {
       const playerIndex = gameState.players.findIndex(p => p.id === currentPlayer.id);
       setCurrentPlayer(prev => prev ? {
@@ -210,17 +290,63 @@ function App() {
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && playerName.trim()) {
-      handleJoinLobby();
-    }
-  };
-
   if (!showLobby) {
     return <LandingPage onCreateGame={handleCreateGame} onJoinGame={handleJoinGame} />;
   }
 
-  const canStartGame = gameState.players.length >= 4;
+  if (joiningCode && !currentPlayer) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto">
+            <header className="text-center mb-8 relative">
+              <button
+                onClick={handleLeaveLobby}
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-white transition-colors"
+                aria-label="Back to main menu"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </button>
+              <h1 className="text-4xl font-bold mb-2 text-purple-400">Join Game</h1>
+              <div className="text-gray-400">
+                Game Code: <span className="font-mono text-xl text-purple-400">{joiningCode}</span>
+              </div>
+            </header>
+
+            <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl border border-gray-700/50">
+              <h2 className="text-xl font-semibold mb-4 text-gray-200">Enter Your Name</h2>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => {
+                    setPlayerName(e.target.value);
+                    setNameError('');
+                  }}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Your name"
+                  className={`w-full px-4 py-2 rounded-lg bg-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 border 
+                    ${nameError ? 'border-red-500' : 'border-gray-600/50'}`}
+                />
+                {nameError && (
+                  <div className="text-red-400 text-sm">{nameError}</div>
+                )}
+                <button
+                  onClick={handleJoinLobby}
+                  disabled={!playerName.trim()}
+                  className="w-full px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Join Game
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const canStartGame = gameState.players.length > 0;
   const hasLeader = gameState.players.some(p => p.isLeader);
   const isLeader = currentPlayer?.isLeader;
 
@@ -268,8 +394,13 @@ function App() {
                     onVotePlayer={() => {
                       // Handle voting logic
                     }}
+                    onKickPlayer={currentPlayer?.isLeader && !player.isLeader ? 
+                      () => handleKickPlayer(player.id) : 
+                      undefined}
                     showVoteButton={gameState.votingFor !== undefined}
                     hasVoted={gameState.votes[player.id]}
+                    isCurrentPlayer={currentPlayer?.id === player.id}
+                    canKick={currentPlayer?.isLeader && !player.isLeader}
                   />
                 ))}
               </div>
@@ -277,7 +408,14 @@ function App() {
           </>
         ) : (
           <div className="max-w-2xl mx-auto">
-            <header className="text-center mb-8">
+            <header className="text-center mb-8 relative">
+              <button
+                onClick={handleLeaveLobby}
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-white transition-colors"
+                aria-label="Back to main menu"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </button>
               <h1 className="text-4xl font-bold mb-2 text-purple-400">Spyfall</h1>
               <div className="text-gray-400">
                 Game Code: <span className="font-mono text-xl text-purple-400">{gameState.id}</span>
@@ -285,62 +423,34 @@ function App() {
             </header>
 
             <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl border border-gray-700/50">
-              <h2 className="text-xl font-semibold mb-4 text-gray-200">Join Game</h2>
-              <div className="flex gap-2 mb-6">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={playerName}
-                    onChange={(e) => {
-                      setPlayerName(e.target.value);
-                      setNameError('');
-                    }}
-                    onKeyPress={handleKeyPress}
-                    disabled={false} // Remove the !!currentPlayer condition here
-                    placeholder="Enter your name"
-                    className={`w-full px-4 py-2 rounded-lg bg-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 border 
-                      ${nameError ? 'border-red-500' : 'border-gray-600/50'}
-                      ${currentPlayer ? 'opacity-50 cursor-not-allowed' : ''}
-                    `}
-                  />
-                  {nameError && (
-                    <div className="text-red-400 text-sm mt-1">{nameError}</div>
-                  )}
-                </div>
-                <button
-                  onClick={handleJoinLobby}
-                  disabled={!playerName.trim()}  // Only disable if name is empty
-                  className="px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Join
-                </button>
-              </div>
-
+              <h2 className="text-xl font-semibold mb-4 text-gray-200">Game Lobby</h2>
               <div className="space-y-2">
                 <div className="text-sm text-gray-400 mb-3">Players ({gameState.players.length}/12)</div>
                 {gameState.players.map(player => (
-                  <div key={player.id} className="flex items-center gap-2 bg-gray-700/50 p-3 rounded-lg">
-                    <span className="text-gray-200">{player.name}</span>
-                    {player.isLeader && (
-                      <span className="flex items-center gap-1 text-yellow-500 text-sm">
-                        <Crown className="w-3.5 h-3.5" />
-                        Leader
-                      </span>
+                  <div key={player.id} className="flex items-center justify-between bg-gray-700/50 p-3 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-200">{player.name}</span>
+                      {player.isLeader && (
+                        <span className="flex items-center gap-1 text-yellow-500 text-sm">
+                          <Crown className="w-3.5 h-3.5" />
+                          Leader
+                        </span>
+                      )}
+                    </div>
+                    {currentPlayer?.isLeader && !player.isLeader && (
+                      <button
+                        onClick={() => handleKickPlayer(player.id)}
+                        className="p-2 text-red-400 hover:text-red-300 transition-colors"
+                        aria-label="Kick player"
+                      >
+                        <UserX className="w-5 h-5" />
+                      </button>
                     )}
                   </div>
                 ))}
               </div>
 
-              {!canStartGame && (
-                <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                  <div className="flex items-center gap-2 text-yellow-500">
-                    <AlertCircle className="w-5 h-5" />
-                    <span>Need at least 4 players to start</span>
-                  </div>
-                </div>
-              )}
-
-              {canStartGame && hasLeader && (
+              {canStartGame && hasLeader && isLeader && (
                 <button
                   onClick={startGame}
                   className="w-full mt-4 px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition-colors text-lg font-medium"
@@ -357,6 +467,11 @@ function App() {
         isOpen={showEndGameDialog}
         onConfirm={endGame}
         onCancel={() => setShowEndGameDialog(false)}
+      />
+
+      <KickDialog
+        isOpen={showKickDialog}
+        onClose={handleKickDialogClose}
       />
     </div>
   );

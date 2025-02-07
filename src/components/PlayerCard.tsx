@@ -1,21 +1,27 @@
 import React from 'react';
-import { User, Crown, Vote } from 'lucide-react';
+import { User, Crown, Vote, UserX } from 'lucide-react';
 import { Player } from '../types';
 
 interface PlayerCardProps {
   player: Player;
   isCurrentTurn: boolean;
   onVotePlayer: () => void;
+  onKickPlayer?: () => void;
   showVoteButton: boolean;
   hasVoted?: boolean;
+  isCurrentPlayer?: boolean;
+  canKick?: boolean;
 }
 
 export function PlayerCard({
   player,
   isCurrentTurn,
   onVotePlayer,
+  onKickPlayer,
   showVoteButton,
-  hasVoted
+  hasVoted,
+  isCurrentPlayer,
+  canKick
 }: PlayerCardProps) {
   return (
     <div className={`
@@ -34,7 +40,9 @@ export function PlayerCard({
             <User className="w-5 h-5 text-gray-300" />
           </div>
           <div>
-            <span className="text-lg font-medium text-gray-200">{player.name}</span>
+            <span className={`text-lg font-medium ${isCurrentPlayer ? 'text-purple-400' : 'text-gray-200'}`}>
+              {player.name}
+            </span>
             {player.isLeader && (
               <div className="flex items-center gap-1 text-yellow-500 text-sm mt-0.5">
                 <Crown className="w-3.5 h-3.5" />
@@ -44,22 +52,33 @@ export function PlayerCard({
           </div>
         </div>
         
-        {showVoteButton && (
-          <button
-            onClick={onVotePlayer}
-            className={`
-              p-2.5 rounded-lg transition-colors duration-200 flex items-center gap-2
-              ${hasVoted 
-                ? 'bg-green-600 hover:bg-green-700' 
-                : 'bg-red-600 hover:bg-red-700'}
-            `}
-          >
-            <Vote className="w-4 h-4 text-white" />
-            <span className="text-sm font-medium text-white">
-              {hasVoted ? 'Voted' : 'Vote'}
-            </span>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {canKick && !player.isLeader && (
+            <button
+              onClick={onKickPlayer}
+              className="p-2.5 rounded-lg bg-red-600 hover:bg-red-700 transition-colors duration-200"
+              title="Kick player"
+            >
+              <UserX className="w-4 h-4 text-white" />
+            </button>
+          )}
+          {showVoteButton && (
+            <button
+              onClick={onVotePlayer}
+              className={`
+                p-2.5 rounded-lg transition-colors duration-200 flex items-center gap-2
+                ${hasVoted 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-red-600 hover:bg-red-700'}
+              `}
+            >
+              <Vote className="w-4 h-4 text-white" />
+              <span className="text-sm font-medium text-white">
+                {hasVoted ? 'Voted' : 'Vote'}
+              </span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

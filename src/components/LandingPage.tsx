@@ -7,7 +7,7 @@ import { ref, get } from 'firebase/database';
 import { db } from '../firebase';
 
 interface LandingPageProps {
-  onCreateGame: (config: GameConfig) => void;
+  onCreateGame: (config: GameConfig, playerName: string) => void;
   onJoinGame: (code: string) => void;
 }
 
@@ -16,17 +16,27 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
   const [gameCodeError, setGameCodeError] = useState('');
   const [showFAQ, setShowFAQ] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [playerName, setPlayerName] = useState('');
+  const [nameError, setNameError] = useState('');
   const [config, setConfig] = useState<GameConfig>({
     numSpies: 1,
-    timeLimit: 480
+    timeLimit: 480,
+    country: 'Canada'
   });
 
   const handleCreateGame = () => {
     if (!showConfig) {
       setShowConfig(true);
-    } else {
-      onCreateGame(config);
+      return;
     }
+
+    const trimmedName = playerName.trim();
+    if (!trimmedName) {
+      setNameError('Please enter your name');
+      return;
+    }
+
+    onCreateGame(config, trimmedName);
   };
 
   const handleJoinAttempt = async (code: string) => {
@@ -36,7 +46,6 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
     }
     
     try {
-      // Check if game exists in Firebase
       const gameRef = ref(db, `games/${code}`);
       const snapshot = await get(gameRef);
       
@@ -45,7 +54,6 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
         return;
       }
 
-      // Game exists, proceed with join
       setGameCodeError('');
       onJoinGame(code);
     } catch (error) {
@@ -55,8 +63,12 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && gameCode) {
-      handleJoinAttempt(gameCode);
+    if (e.key === 'Enter') {
+      if (showConfig && playerName) {
+        handleCreateGame();
+      } else if (gameCode) {
+        handleJoinAttempt(gameCode);
+      }
     }
   };
 
@@ -72,13 +84,31 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
           {showConfig ? (
             <div className="space-y-6">
               <GameConfigPanel config={config} onConfigChange={setConfig} />
-              <button
-                onClick={handleCreateGame}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors text-lg font-medium"
-              >
-                <Plus className="w-5 h-5" />
-                Create Game
-              </button>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={playerName}
+                  onChange={(e) => {
+                    setPlayerName(e.target.value);
+                    setNameError('');
+                  }}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Enter your name"
+                  className={`w-full px-4 py-3 rounded-lg bg-gray-800 text-white placeholder-gray-500 
+                    focus:outline-none focus:ring-2 focus:ring-purple-500 border
+                    ${nameError ? 'border-red-500' : 'border-gray-700'}`}
+                />
+                {nameError && (
+                  <div className="text-red-400 text-sm">{nameError}</div>
+                )}
+                <button
+                  onClick={handleCreateGame}
+                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors text-lg font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  Create Game
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
