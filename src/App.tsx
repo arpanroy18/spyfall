@@ -117,21 +117,28 @@ function App() {
     if (currentPlayer && gameState.id) {
       const updatedPlayers = gameState.players.filter(p => p.id !== currentPlayer.id);
       
-      // If the leaving player was the leader, assign leadership to the next player
-      if (currentPlayer.isLeader && updatedPlayers.length > 0) {
-        const newLeader = { ...updatedPlayers[0], isLeader: true };
-        updatedPlayers[0] = newLeader;
+      // If this was the last player, remove the game entirely
+      if (updatedPlayers.length === 0) {
+        await set(ref(db, `games/${gameState.id}`), null);
+      } else {
+        // If the leaving player was the leader, assign leadership to the next player
+        if (currentPlayer.isLeader && updatedPlayers.length > 0) {
+          const newLeader = { ...updatedPlayers[0], isLeader: true };
+          updatedPlayers[0] = newLeader;
+
+          if (currentPlayer.id === newLeader.id) {
+            setCurrentPlayer(newLeader);
+          }
+        }
+
+        // Update the game state
+        const updatedGameState = {
+          ...gameState,
+          players: updatedPlayers
+        };
+        await set(ref(db, `games/${gameState.id}`), updatedGameState);
       }
-
-      // Update the entire game state to ensure leadership changes are properly propagated
-      const updatedGameState = {
-        ...gameState,
-        players: updatedPlayers
-      };
-
-      // Update the entire game state in Firebase
-      await set(ref(db, `games/${gameState.id}`), updatedGameState);
-
+      
       setGameState(initialGameState);
       setCurrentPlayer(null);
       setShowLobby(false);
@@ -164,9 +171,16 @@ function App() {
         if (data) {
           // Check if current player was kicked
           if (currentPlayer && !data.players?.some((p: Player) => p.id === currentPlayer.id)) {
-            // Player was kicked, show kick dialog
             setShowKickDialog(true);
             return;
+          }
+
+          // Update current player if leadership changed
+          if (currentPlayer) {
+            const updatedCurrentPlayer = data.players?.find((p: Player) => p.id === currentPlayer.id);
+            if (updatedCurrentPlayer && updatedCurrentPlayer.isLeader !== currentPlayer.isLeader) {
+              setCurrentPlayer(updatedCurrentPlayer);
+            }
           }
 
           setGameState(prev => ({
@@ -233,22 +247,12 @@ function App() {
 
   const endGame = async () => {
     if (gameState.id) {
-      const updatedState = {
-        ...gameState,
-        isPlaying: false,
-        timeRemaining: gameState.config.timeLimit,
-        location: null,
-        currentTurn: null,
-        votingFor: null,
-        votes: {},
-        players: gameState.players.map(player => ({
-          ...player,
-          isSpy: false
-        }))
-      };
-
-      await set(ref(db, `games/${gameState.id}`), updatedState);
+      // Remove the game entirely instead of updating it
+      await set(ref(db, `games/${gameState.id}`), null);
       setShowEndGameDialog(false);
+      setShowLobby(false);
+      setGameState(initialGameState);
+      setCurrentPlayer(null);
     }
   };
 
