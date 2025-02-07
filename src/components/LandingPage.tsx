@@ -73,14 +73,14 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <main className="min-h-screen bg-gray-900 text-white">
       <div className="container mx-auto px-4 py-8">
         <header className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 text-purple-400">Spyfall</h1>
-          <p className="text-xl text-gray-400">The ultimate social deduction game</p>
+          <h1 className="text-5xl font-bold mb-4 text-purple-400">Play Spyfall Online</h1>
+          <p className="text-xl text-gray-400">Free multiplayer social deduction game - No registration required!</p>
         </header>
 
-        <div className="max-w-md mx-auto mb-12">
+        <section className="max-w-md mx-auto mb-12" aria-label="game-controls">
           {showConfig ? (
             <div className="space-y-6">
               <GameConfigPanel config={config} onConfigChange={setConfig} />
@@ -151,9 +151,18 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
               </div>
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="text-center mb-12">
+        <section className="text-center mb-12">
+          <article className="mb-8">
+            <h2 className="text-2xl font-bold mb-4">About Spyfall</h2>
+            <p className="text-gray-300">
+              Spyfall is an exciting party game where players must use their deduction and deception skills. 
+              One player becomes the spy who must figure out their location, while others try to identify the spy 
+              without revealing too much information.
+            </p>
+          </article>
+
           <button
             onClick={() => setShowFAQ(!showFAQ)}
             className="text-purple-400 hover:text-purple-300 transition-colors text-lg flex items-center gap-2 mx-auto"
@@ -161,10 +170,10 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
             <Users className="w-5 h-5" />
             {showFAQ ? 'Hide How to Play' : 'Show How to Play'}
           </button>
-        </div>
+        </section>
 
         {showFAQ && <FAQ />}
       </div>
-    </div>
+    </main>
   );
 }
