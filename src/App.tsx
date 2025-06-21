@@ -5,6 +5,7 @@ import { LandingPage } from './components/LandingPage';
 import { RoleInfo } from './components/RoleInfo';
 import { EndGameDialog } from './components/EndGameDialog';
 import { KickDialog } from './components/KickDialog';
+import { MissionAbortedDialog } from './components/MissionAbortedDialog';
 import { Player, GameState, COUNTRIES, GameConfig } from './types';
 import { MapPin, Users, Crown, AlertCircle, XCircle, ArrowLeft, UserX } from 'lucide-react';
 import { ref, set, get, onValue, off } from 'firebase/database';
@@ -39,6 +40,7 @@ function App() {
   const [showLobby, setShowLobby] = useState(false);
   const [showEndGameDialog, setShowEndGameDialog] = useState(false);
   const [showKickDialog, setShowKickDialog] = useState(false);
+  const [showMissionAbortedDialog, setShowMissionAbortedDialog] = useState(false);
   const [nameError, setNameError] = useState<string>('');
   const [joiningCode, setJoiningCode] = useState<string>('');
 
@@ -169,6 +171,12 @@ function App() {
       const unsubscribe = onValue(gameRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
+          // Check if mission was aborted by leader
+          if (data.missionAborted && currentPlayer && !currentPlayer.isLeader) {
+            setShowMissionAbortedDialog(true);
+            return;
+          }
+
           // Check if current player was kicked
           if (currentPlayer && !data.players?.some((p: Player) => p.id === currentPlayer.id)) {
             setShowKickDialog(true);
@@ -201,6 +209,14 @@ function App() {
 
   const handleKickDialogClose = () => {
     setShowKickDialog(false);
+    setShowLobby(false);
+    setGameState(initialGameState);
+    setCurrentPlayer(null);
+    setJoiningCode('');
+  };
+
+  const handleMissionAbortedClose = () => {
+    setShowMissionAbortedDialog(false);
     setShowLobby(false);
     setGameState(initialGameState);
     setCurrentPlayer(null);
@@ -247,8 +263,14 @@ function App() {
 
   const endGame = async () => {
     if (gameState.id) {
-      // Remove the game entirely instead of updating it
-      await set(ref(db, `games/${gameState.id}`), null);
+      // Set mission aborted flag for other players to see
+      await set(ref(db, `games/${gameState.id}/missionAborted`), true);
+      
+      // Wait a brief moment for other players to see the flag, then remove the game
+      setTimeout(async () => {
+        await set(ref(db, `games/${gameState.id}`), null);
+      }, 1000);
+      
       setShowEndGameDialog(false);
       setShowLobby(false);
       setGameState(initialGameState);
@@ -300,48 +322,60 @@ function App() {
 
   if (joiningCode && !currentPlayer) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
-        <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen bg-black text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-black to-gray-900"></div>
+        <div className="relative z-10 container mx-auto px-4 py-8">
           <div className="max-w-md mx-auto">
             <header className="text-center mb-8 relative">
               <button
                 onClick={handleLeaveLobby}
-                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-white transition-colors"
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-400 transition-colors"
                 aria-label="Back to main menu"
               >
                 <ArrowLeft className="w-6 h-6" />
               </button>
-              <h1 className="text-4xl font-bold mb-2 text-purple-400">Join Game</h1>
-              <div className="text-gray-400">
-                Game Code: <span className="font-mono text-xl text-purple-400">{joiningCode}</span>
+              <h1 className="text-4xl font-bold mb-2 text-red-400 font-mono tracking-wider">INFILTRATE</h1>
+              <div className="text-gray-400 font-mono">
+                ACCESS CODE: <span className="font-mono text-xl text-amber-400 tracking-widest">{joiningCode}</span>
               </div>
+              <div className="h-px bg-gradient-to-r from-transparent via-red-500 to-transparent mt-4"></div>
             </header>
 
-            <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl border border-gray-700/50">
-              <h2 className="text-xl font-semibold mb-4 text-gray-200">Enter Your Name</h2>
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  value={playerName}
-                  onChange={(e) => {
-                    setPlayerName(e.target.value);
-                    setNameError('');
-                  }}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Your name"
-                  className={`w-full px-4 py-2 rounded-lg bg-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 border 
-                    ${nameError ? 'border-red-500' : 'border-gray-600/50'}`}
-                />
-                {nameError && (
-                  <div className="text-red-400 text-sm">{nameError}</div>
-                )}
-                <button
-                  onClick={handleJoinLobby}
-                  disabled={!playerName.trim()}
-                  className="w-full px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Join Game
-                </button>
+            <div className="bg-gray-900/90 backdrop-blur-sm border-2 border-red-900/50 p-6 shadow-2xl shadow-red-900/20 relative">
+              <div className="absolute top-0 left-0 right-0 h-8 bg-gray-800 border-b border-red-900/50 flex items-center px-4">
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                </div>
+                <div className="ml-4 text-xs text-gray-400 font-mono">AGENT_AUTH.exe</div>
+              </div>
+              <div className="pt-4">
+                <h2 className="text-lg font-semibold mb-4 text-red-400 font-mono tracking-wide">ENTER CODENAME</h2>
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    value={playerName}
+                    onChange={(e) => {
+                      setPlayerName(e.target.value);
+                      setNameError('');
+                    }}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Agent codename"
+                    className={`w-full px-4 py-3 bg-black/50 border text-white placeholder-gray-500 font-mono focus:outline-none focus:ring-1 transition-all duration-300 
+                      ${nameError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-amber-500 hover:border-gray-600'}`}
+                  />
+                  {nameError && (
+                    <div className="text-red-400 text-sm font-mono">{nameError}</div>
+                  )}
+                  <button
+                    onClick={handleJoinLobby}
+                    disabled={!playerName.trim()}
+                    className="w-full px-4 py-3 bg-red-800 hover:bg-red-700 border border-red-600 text-white font-mono tracking-wide transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-900/20"
+                  >
+                    AUTHORIZE ACCESS
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -355,8 +389,9 @@ function App() {
   const isLeader = currentPlayer?.isLeader;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-black to-gray-900"></div>
+      <div className="relative z-10 container mx-auto px-4 py-8">
         {gameState.isPlaying ? (
           <>
             <div className="max-w-6xl mx-auto">
@@ -369,22 +404,22 @@ function App() {
               )}
 
               <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                   <GameTimer timeRemaining={gameState.timeRemaining} />
-                  <div className="h-8 w-px bg-gray-700/50" />
-                  <div className="flex items-center gap-2 text-gray-400">
-                    <Users className="w-5 h-5" />
-                    <span className="text-lg">{gameState.players.length} Players</span>
+                  <div className="h-8 w-px bg-red-800/50" />
+                  <div className="flex items-center gap-2 text-gray-400 font-mono border border-gray-700 px-3 py-1 bg-black/20">
+                    <Users className="w-4 h-4 text-amber-400" />
+                    <span className="text-sm">{gameState.players.length} AGENTS</span>
                   </div>
                 </div>
                 {isLeader && (
                   <button
                     onClick={() => setShowEndGameDialog(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 transition-colors rounded-lg text-white font-medium shadow-lg hover:shadow-xl"
-                    aria-label="End Game"
+                    className="flex items-center gap-2 px-4 py-2 bg-red-800 hover:bg-red-700 border border-red-600 text-white font-mono tracking-wide transition-all duration-300 shadow-lg shadow-red-900/20"
+                    aria-label="Abort Mission"
                   >
-                    <XCircle className="w-5 h-5" />
-                    End Game
+                    <XCircle className="w-4 h-4" />
+                    ABORT MISSION
                   </button>
                 )}
               </div>
@@ -415,53 +450,65 @@ function App() {
             <header className="text-center mb-8 relative">
               <button
                 onClick={handleLeaveLobby}
-                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-white transition-colors"
+                className="absolute left-0 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-red-400 transition-colors"
                 aria-label="Back to main menu"
               >
                 <ArrowLeft className="w-6 h-6" />
               </button>
-              <h1 className="text-4xl font-bold mb-2 text-purple-400">Spyfall</h1>
-              <div className="text-gray-400">
-                Game Code: <span className="font-mono text-xl text-purple-400">{gameState.id}</span>
+              <h1 className="text-4xl font-bold mb-2 text-red-400 font-mono tracking-wider">SPYFALL</h1>
+              <div className="text-gray-400 font-mono">
+                MISSION CODE: <span className="font-mono text-xl text-amber-400 tracking-widest">{gameState.id}</span>
               </div>
+              <div className="h-px bg-gradient-to-r from-transparent via-red-500 to-transparent mt-4"></div>
             </header>
 
-            <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl border border-gray-700/50">
-              <h2 className="text-xl font-semibold mb-4 text-gray-200">Game Lobby</h2>
-              <div className="space-y-2">
-                <div className="text-sm text-gray-400 mb-3">Players ({gameState.players.length}/12)</div>
-                {gameState.players.map(player => (
-                  <div key={player.id} className="flex items-center justify-between bg-gray-700/50 p-3 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-200">{player.name}</span>
-                      {player.isLeader && (
-                        <span className="flex items-center gap-1 text-yellow-500 text-sm">
-                          <Crown className="w-3.5 h-3.5" />
-                          Leader
-                        </span>
+            <div className="bg-gray-900/90 backdrop-blur-sm border-2 border-red-900/50 p-6 shadow-2xl shadow-red-900/20 relative">
+              <div className="absolute top-0 left-0 right-0 h-8 bg-gray-800 border-b border-red-900/50 flex items-center px-4">
+                <div className="flex gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                </div>
+                <div className="ml-4 text-xs text-gray-400 font-mono">MISSION_LOBBY.exe</div>
+              </div>
+              <div className="pt-4">
+                <h2 className="text-lg font-semibold mb-4 text-red-400 font-mono tracking-wide">AGENT ROSTER</h2>
+                <div className="space-y-2">
+                  <div className="text-sm text-amber-400 mb-3 font-mono">OPERATIVES ({gameState.players.length}/12)</div>
+                  {gameState.players.map(player => (
+                    <div key={player.id} className="flex items-center justify-between bg-black/20 border border-gray-700 p-3 hover:border-red-800 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-gray-200 font-mono">{player.name}</span>
+                        {player.isLeader && (
+                          <span className="flex items-center gap-1 text-amber-500 text-sm font-mono border border-amber-700 px-2 py-1 bg-amber-900/20">
+                            <Crown className="w-3.5 h-3.5" />
+                            COMMANDER
+                          </span>
+                        )}
+                      </div>
+                      {currentPlayer?.isLeader && !player.isLeader && (
+                        <button
+                          onClick={() => handleKickPlayer(player.id)}
+                          className="p-2 text-red-400 hover:text-red-300 transition-colors border border-red-800 hover:border-red-600 bg-red-900/20"
+                          aria-label="Remove agent"
+                        >
+                          <UserX className="w-4 h-4" />
+                        </button>
                       )}
                     </div>
-                    {currentPlayer?.isLeader && !player.isLeader && (
-                      <button
-                        onClick={() => handleKickPlayer(player.id)}
-                        className="p-2 text-red-400 hover:text-red-300 transition-colors"
-                        aria-label="Kick player"
-                      >
-                        <UserX className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
 
-              {canStartGame && hasLeader && isLeader && (
-                <button
-                  onClick={startGame}
-                  className="w-full mt-4 px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition-colors text-lg font-medium"
-                >
-                  Start Game
-                </button>
-              )}
+                {canStartGame && hasLeader && isLeader && (
+                  <button
+                    onClick={startGame}
+                    className="w-full mt-6 px-4 py-3 bg-red-800 hover:bg-red-700 border border-red-600 text-white font-mono tracking-wide transition-all duration-300 text-lg shadow-lg shadow-red-900/20"
+                  >
+                    INITIATE MISSION
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -476,6 +523,11 @@ function App() {
       <KickDialog
         isOpen={showKickDialog}
         onClose={handleKickDialogClose}
+      />
+
+      <MissionAbortedDialog
+        isOpen={showMissionAbortedDialog}
+        onReturnHome={handleMissionAbortedClose}
       />
     </div>
   );

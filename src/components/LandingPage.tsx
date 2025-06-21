@@ -194,11 +194,12 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
                       type="text"
                       value={gameCode}
                       onChange={(e) => {
-                        setGameCode(e.target.value.toUpperCase());
+                        setGameCode(e.target.value.toUpperCase().slice(0, 6));
                         setGameCodeError('');
                       }}
                       onKeyPress={handleKeyPress}
                       placeholder="ENTER ACCESS CODE"
+                      maxLength={6}
                       className={`w-full px-4 py-3 pr-12 bg-black/50 border text-white placeholder-gray-500 font-mono tracking-widest text-center
                         focus:outline-none focus:ring-1 transition-all duration-300
                         ${gameCodeError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-amber-500 hover:border-gray-600'}`}

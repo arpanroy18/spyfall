@@ -24,31 +24,19 @@ export function PlayerCard({
   canKick
 }: PlayerCardProps) {
   return (
-    <div className={`
-      relative p-6 rounded-xl border transition-all duration-300
-      ${isCurrentTurn 
-        ? 'bg-purple-900/50 border-purple-500/50 shadow-lg shadow-purple-900/20' 
-        : 'bg-gray-800/50 border-gray-700/50'}
-      backdrop-blur-sm hover:scale-102 hover:shadow-xl
-    `}>
+    <div className="relative p-4 border transition-all duration-300 font-mono bg-gray-900/80 border-gray-700 backdrop-blur-sm hover:border-gray-600">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`
-            p-2 rounded-lg
-            ${isCurrentTurn ? 'bg-purple-500/20' : 'bg-gray-700/50'}
-          `}>
-            <User className="w-5 h-5 text-gray-300" />
+          <div className="p-2 border bg-black/50 border-gray-700">
+            <User className="w-4 h-4 text-gray-300" />
           </div>
           <div>
-            <span className={`text-lg font-medium ${isCurrentPlayer ? 'text-purple-400' : 'text-gray-200'}`}>
-              {player.name}
-            </span>
-            {player.isLeader && (
-              <div className="flex items-center gap-1 text-yellow-500 text-sm mt-0.5">
-                <Crown className="w-3.5 h-3.5" />
-                <span>Leader</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span className="font-medium text-sm text-gray-200">
+                {player.name}
+              </span>
+            </div>
           </div>
         </div>
         
@@ -56,25 +44,25 @@ export function PlayerCard({
           {canKick && !player.isLeader && (
             <button
               onClick={onKickPlayer}
-              className="p-2.5 rounded-lg bg-red-600 hover:bg-red-700 transition-colors duration-200"
-              title="Kick player"
+              className="p-2 bg-red-800 hover:bg-red-700 border border-red-600 transition-colors duration-200"
+              title="Remove agent"
             >
-              <UserX className="w-4 h-4 text-white" />
+              <UserX className="w-3 h-3 text-white" />
             </button>
           )}
           {showVoteButton && (
             <button
               onClick={onVotePlayer}
               className={`
-                p-2.5 rounded-lg transition-colors duration-200 flex items-center gap-2
+                p-2 transition-colors duration-200 flex items-center gap-1 border font-mono text-xs
                 ${hasVoted 
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-red-600 hover:bg-red-700'}
+                  ? 'bg-green-800 border-green-600 hover:bg-green-700' 
+                  : 'bg-red-800 border-red-600 hover:bg-red-700'}
               `}
             >
-              <Vote className="w-4 h-4 text-white" />
-              <span className="text-sm font-medium text-white">
-                {hasVoted ? 'Voted' : 'Vote'}
+              <Vote className="w-3 h-3 text-white" />
+              <span className="text-white">
+                {hasVoted ? 'VOTED' : 'VOTE'}
               </span>
             </button>
           )}
