@@ -3,13 +3,13 @@ export interface Player {
   name: string;
   isSpy?: boolean;
   isLeader?: boolean;
+  role?: string;
   score: number;
 }
 
 export interface GameConfig {
   numSpies: number;
   timeLimit: number;
-  country: string;
 }
 
 export interface GameState {
@@ -30,127 +30,332 @@ export interface FAQItem {
   answer: string;
 }
 
-export const COUNTRIES = {
-  'Canada': [
-    'CN Tower',
-    'Banff National Park',
-    'Hockey Arena',
-    'Tim Hortons',
-    'Parliament Hill',
-    'Stanley Park',
-    'Niagara Falls',
-    'Montreal Metro',
-    'Vancouver Seawall',
-    'Canadian Museum of History',
-    'Rideau Canal',
-    'Royal Ontario Museum',
-    'Whistler Ski Resort',
-    'Calgary Stampede Grounds',
-    'Quebec City Old Town'
-  ],
-  'United States': [
-    'Empire State Building',
-    'Disney World',
-    'Grand Canyon',
-    'Times Square',
-    'White House',
-    'Hollywood Walk of Fame',
-    'Las Vegas Casino',
-    'Central Park',
-    'Golden Gate Bridge',
-    'Mount Rushmore',
-    'NASA Space Center',
-    'Broadway Theater',
-    'Pentagon',
-    'Statue of Liberty',
-    'Mall of America'
-  ],
-  'United Kingdom': [
-    'Big Ben',
-    'Buckingham Palace',
-    'London Underground',
-    'Tower Bridge',
-    'Stonehenge',
-    'Edinburgh Castle',
-    'British Museum',
-    'Oxford University',
-    'London Eye',
-    'Westminster Abbey',
-    'Tower of London',
-    'Shakespeare\'s Globe',
-    'Piccadilly Circus',
-    'Royal Albert Hall',
-    'Hadrian\'s Wall'
-  ],
-  'France': [
-    'Eiffel Tower',
-    'Louvre Museum',
-    'Palace of Versailles',
-    'Notre-Dame Cathedral',
-    'French Riviera Beach',
-    'Mont Saint-Michel',
-    'Champs-Élysées',
-    'French Vineyard',
-    'Paris Metro',
-    'French Café',
-    'Arc de Triomphe',
-    'Disneyland Paris',
-    'French Alps Ski Resort',
-    'French Fashion House',
-    'French Bakery'
-  ],
-  'Germany': [
-    'Brandenburg Gate',
-    'Neuschwanstein Castle',
-    'Berlin Wall',
-    'Oktoberfest',
-    'Cologne Cathedral',
-    'Reichstag Building',
-    'BMW Factory',
-    'Black Forest',
-    'Hamburg Port',
-    'Dresden Opera House',
-    'Munich Beer Hall',
-    'Berlin Zoo',
-    'German Christmas Market',
-    'Heidelberg University',
-    'Deutsche Bahn Station'
-  ],
-  'India': [
-    'Taj Mahal',
-    'Gateway of India',
-    'Jaipur Palace',
-    'Indian Railway Station',
-    'Varanasi Ghats',
-    'Bollywood Studio',
-    'Kerala Backwaters',
-    'Delhi Spice Market',
-    'Golden Temple',
-    'Indian Cricket Stadium',
-    'Mysore Palace',
-    'Dharavi',
-    'Indian Tech Park',
-    'Ajanta Caves',
-    'Indian Wedding Hall'
-  ],
-  'China': [
-    'Great Wall',
-    'Forbidden City',
-    'Shanghai Tower',
-    'Terracotta Army',
-    'Temple of Heaven',
-    'West Lake',
-    'Chinese Opera House',
-    'Beijing Hutong',
-    'Hong Kong Harbor',
-    'Chengdu Panda Base',
-    'Chinese Tea House',
-    'Silk Market',
-    'Chinese Tech Campus',
-    'Shanghai Metro',
-    'Chinese Garden'
-  ]
-} as const;
+export const LOCATIONS = [
+  {
+    "location": "Airplane",
+    "roles": [
+      "First Class Passenger",
+      "Air Marshall",
+      "Mechanic",
+      "Economy Class Passenger",
+      "Stewardess",
+      "Co-Pilot",
+      "Captain"
+    ]
+  },
+  {
+    "location": "Bank",
+    "roles": [
+      "Armored Car Driver",
+      "Manager",
+      "Consultant",
+      "Customer",
+      "Robber",
+      "Security Guard",
+      "Teller"
+    ]
+  },
+  {
+    "location": "Beach",
+    "roles": [
+      "Beach Waitress",
+      "Kite Surfer",
+      "Lifeguard",
+      "Thief",
+      "Beach Goer",
+      "Beach Photographer",
+      "Ice Cream Truck Driver"
+    ]
+  },
+  {
+    "location": "Broadway Theater",
+    "roles": [
+      "Coat Check Lady",
+      "Prompter",
+      "Cashier",
+      "Visitor",
+      "Director",
+      "Actor",
+      "Crewman"
+    ]
+  },
+  {
+    "location": "Casino",
+    "roles": [
+      "Bartender",
+      "Head Security Guard",
+      "Bouncer",
+      "Manager",
+      "Hustler",
+      "Dealer",
+      "Gambler"
+    ]
+  },
+  {
+    "location": "Cathedral",
+    "roles": [
+      "Priest",
+      "Beggar",
+      "Sinner",
+      "Parishioner",
+      "Tourist",
+      "Sponsor",
+      "Choir Singer"
+    ]
+  },
+  {
+    "location": "Circus Tent",
+    "roles": [
+      "Acrobat",
+      "Animal Trainer",
+      "Magician",
+      "Visitor",
+      "Fire Eater",
+      "Clown",
+      "Juggler"
+    ]
+  },
+  {
+    "location": "Corporate Party",
+    "roles": [
+      "Entertainer",
+      "Manager",
+      "Unwelcomed Guest",
+      "Owner",
+      "Secretary",
+      "Accountant",
+      "Delivery Boy"
+    ]
+  },
+  {
+    "location": "Crusader Army",
+    "roles": [
+      "Monk",
+      "Imprisoned Arab",
+      "Servant",
+      "Bishop",
+      "Squire",
+      "Archer",
+      "Knight"
+    ]
+  },
+  {
+    "location": "Day Spa",
+    "roles": [
+      "Customer",
+      "Stylist",
+      "Masseuse",
+      "Manicurist",
+      "Makeup Artist",
+      "Dermatologist",
+      "Beautician"
+    ]
+  },
+  {
+    "location": "Embassy",
+    "roles": [
+      "Security Guard",
+      "Secretary",
+      "Ambassador",
+      "Government Official",
+      "Tourist",
+      "Refugee",
+      "Diplomat"
+    ]
+  },
+  {
+    "location": "Hospital",
+    "roles": [
+      "Nurse",
+      "Doctor",
+      "Anesthesiologist",
+      "Intern",
+      "Patient",
+      "Therapist",
+      "Surgeon"
+    ]
+  },
+  {
+    "location": "Hotel",
+    "roles": [
+      "Doorman",
+      "Security Guard",
+      "Manager",
+      "Housekeeper",
+      "Customer",
+      "Bartender",
+      "Bellman"
+    ]
+  },
+  {
+    "location": "Military Base",
+    "roles": [
+      "Deserter",
+      "Colonel",
+      "Medic",
+      "Soldier",
+      "Sniper",
+      "Officer",
+      "Tank Engineer"
+    ]
+  },
+  {
+    "location": "Movie Studio",
+    "roles": [
+      "Stuntman",
+      "Sound Engineer",
+      "Cameraman",
+      "Director",
+      "Costume Artist",
+      "Actor",
+      "Producer"
+    ]
+  },
+  {
+    "location": "Ocean Liner",
+    "roles": [
+      "Rich Passenger",
+      "Cook",
+      "Captain",
+      "Bartender",
+      "Musician",
+      "Waiter",
+      "Mechanic"
+    ]
+  },
+  {
+    "location": "Passenger Train",
+    "roles": [
+      "Mechanic",
+      "Border Patrol",
+      "Train Attendant",
+      "Passenger",
+      "Restaurant Chef",
+      "Engineer",
+      "Stoker"
+    ]
+  },
+  {
+    "location": "Pirate Ship",
+    "roles": [
+      "Cook",
+      "Sailor",
+      "Slave",
+      "Cannoneer",
+      "Bound Prisoner",
+      "Cabin Boy",
+      "Brave Captain"
+    ]
+  },
+  {
+    "location": "Polar Station",
+    "roles": [
+      "Medic",
+      "Geologist",
+      "Expedition Leader",
+      "Biologist",
+      "Radioman",
+      "Hydrologist",
+      "Meteorologist"
+    ]
+  },
+  {
+    "location": "Police Station",
+    "roles": [
+      "Detective",
+      "Lawyer",
+      "Journalist",
+      "Criminalist",
+      "Archivist",
+      "Patrol Officer",
+      "Criminal"
+    ]
+  },
+  {
+    "location": "Restaurant",
+    "roles": [
+      "Musician",
+      "Customer",
+      "Bouncer",
+      "Hostess",
+      "Head Chef",
+      "Food Critic",
+      "Waiter"
+    ]
+  },
+  {
+    "location": "School",
+    "roles": [
+      "Gym Teacher",
+      "Student",
+      "Principal",
+      "Security Guard",
+      "Janitor",
+      "Lunch Lady",
+      "Maintenance Man"
+    ]
+  },
+  {
+    "location": "Service Station",
+    "roles": [
+      "Manager",
+      "Tire Specialist",
+      "Biker",
+      "Car Owner",
+      "Car Wash Operator",
+      "Electrician",
+      "Auto Mechanic"
+    ]
+  },
+  {
+    "location": "Space Station",
+    "roles": [
+      "Engineer",
+      "Alien",
+      "Space Tourist",
+      "Pilot",
+      "Commander",
+      "Scientist",
+      "Doctor"
+    ]
+  },
+  {
+    "location": "Submarine",
+    "roles": [
+      "Cook",
+      "Commander",
+      "Sonar Technician",
+      "Electronics Technician",
+      "Sailor",
+      "Radioman",
+      "Navigator"
+    ]
+  },
+  {
+    "location": "Supermarket",
+    "roles": [
+      "Customer",
+      "Cashier",
+      "Butcher",
+      "Janitor",
+      "Security Guard",
+      "Food Sample Demonstrator",
+      "Shelf Stocker"
+    ]
+  },
+  {
+    "location": "University",
+    "roles": [
+      "Graduate Student",
+      "Professor",
+      "Dean",
+      "Psychologist",
+      "Maintenance Man",
+      "Student",
+      "Janitor"
+    ]
+  }
+] as const;
 
 export interface GameLookup {
   [gameId: string]: GameState;

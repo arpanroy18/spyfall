@@ -20,8 +20,7 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
   const [nameError, setNameError] = useState('');
   const [config, setConfig] = useState<GameConfig>({
     numSpies: 1,
-    timeLimit: 480,
-    country: 'Canada'
+    timeLimit: 480
   });
 
   React.useEffect(() => {

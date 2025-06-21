@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Crown, Vote, UserX } from 'lucide-react';
+import { User, Vote, UserX } from 'lucide-react';
 import { Player } from '../types';
 
 interface PlayerCardProps {
@@ -24,7 +24,9 @@ export function PlayerCard({
   canKick
 }: PlayerCardProps) {
   return (
-    <div className="relative p-4 border transition-all duration-300 font-mono bg-gray-900/80 border-gray-700 backdrop-blur-sm hover:border-gray-600">
+    <div className={`relative p-4 border transition-all duration-300 font-mono backdrop-blur-sm hover:border-gray-600 ${
+      isCurrentPlayer ? 'bg-blue-900/80 border-blue-600' : 'bg-gray-900/80 border-gray-700'
+    } ${isCurrentTurn ? 'ring-2 ring-amber-500' : ''}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 border bg-black/50 border-gray-700">

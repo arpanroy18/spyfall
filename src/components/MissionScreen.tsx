@@ -26,7 +26,7 @@ export const MissionScreen: React.FC<MissionScreenProps> = ({
         <RoleInfo
           isSpy={currentPlayer.isSpy || false}
           location={gameState.location}
-          country={gameState.config.country}
+          role={currentPlayer.role || ''}
         />
       )}
 

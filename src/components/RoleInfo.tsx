@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { MapPin, Eye, EyeOff, Globe2 } from 'lucide-react';
+import { MapPin, Eye, EyeOff, User } from 'lucide-react';
 
 interface RoleInfoProps {
   isSpy: boolean;
   location: string;
-  country: string;
+  role: string;
 }
 
-export function RoleInfo({ isSpy, location, country }: RoleInfoProps) {
+export function RoleInfo({ isSpy, location, role }: RoleInfoProps) {
   const [isHidden, setIsHidden] = useState(false);
 
   return (
@@ -38,13 +38,7 @@ export function RoleInfo({ isSpy, location, country }: RoleInfoProps) {
               )
             )}
             <h2 className="text-lg font-semibold text-gray-200 font-mono tracking-wide">
-              ASSIGNMENT: {isHidden ? (
-                <span className="text-gray-400">CLASSIFIED</span>
-              ) : (
-                <span className={isSpy ? "text-red-400" : "text-green-400"}>
-                  {isSpy ? 'ENEMY SPY' : 'LOYAL AGENT'}
-                </span>
-              )}
+              INTEL BRIEFING
             </h2>
           </div>
           <div className="text-xs text-gray-500 font-mono">CLICK TO {isHidden ? 'REVEAL' : 'CONCEAL'}</div>
@@ -52,12 +46,16 @@ export function RoleInfo({ isSpy, location, country }: RoleInfoProps) {
 
         <div className="space-y-3">
           <div className="flex items-center gap-3 border-l-2 border-blue-700 pl-3 bg-blue-900/10">
-            <Globe2 className="w-4 h-4 text-blue-400" />
+            <User className="w-4 h-4 text-blue-400" />
             <span className="text-sm text-gray-300 font-mono">
-              REGION: {isHidden ? (
+              ROLE: {isHidden ? (
                 <span className="text-gray-400 font-medium">CLASSIFIED</span>
               ) : (
-                <span className="text-blue-400 font-medium">{country}</span>
+                isSpy ? (
+                  <span className="text-red-400 font-medium">SPY</span>
+                ) : (
+                  <span className="text-blue-400 font-medium">{role}</span>
+                )
               )}
             </span>
           </div>

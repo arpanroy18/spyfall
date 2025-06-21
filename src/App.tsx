@@ -6,8 +6,8 @@ import { MissionScreen } from './components/MissionScreen';
 import { EndGameDialog } from './components/EndGameDialog';
 import { KickDialog } from './components/KickDialog';
 import { MissionAbortedDialog } from './components/MissionAbortedDialog';
-import { Player, GameState, COUNTRIES, GameConfig } from './types';
-import { ref, set, get, onValue, off } from 'firebase/database';
+import { Player, GameState, LOCATIONS, GameConfig } from './types';
+import { ref, set, get, onValue } from 'firebase/database';
 import { db } from './firebase';
 
 // -------------------------------------------------------------------------------------------------
@@ -21,7 +21,7 @@ const initialGameState: GameState = {
   players: [],
   waitingPlayers: [],
   votes: {},
-  config: { numSpies: 1, timeLimit: 480, country: 'Canada' },
+  config: { numSpies: 1, timeLimit: 480 },
   currentTurn: null
 };
 
@@ -81,10 +81,12 @@ function App() {
         return;
       }
 
-      // Update local leadership flag --------------------------------------------------------------
+      // Update local player info including role and spy status ------------------------------------
       if (currentPlayer) {
         const me = data.players?.find((p: Player) => p.id === currentPlayer.id);
-        if (me && me.isLeader !== currentPlayer.isLeader) setCurrentPlayer(me);
+        if (me && (me.isLeader !== currentPlayer.isLeader || me.isSpy !== currentPlayer.isSpy || me.role !== currentPlayer.role)) {
+          setCurrentPlayer(me);
+        }
       }
 
       setGameState({
@@ -96,7 +98,7 @@ function App() {
         currentTurn: data.currentTurn || null
       });
     });
-    return () => off(gameRef);
+    return () => unsubscribe();
   }, [gameState.id, currentPlayer]);
 
   // -------------------------------------------------------------------------------------------------
@@ -120,7 +122,7 @@ function App() {
     const leader: Player = { id: crypto.randomUUID(), name: creatorName, isLeader: true, score: 0, isSpy: false };
     const newGameState: GameState = {
       id: gameId,
-      config: { ...config, country: config.country || 'Canada' },
+      config,
       timeRemaining: config.timeLimit,
       players: [leader],
       isPlaying: false,
@@ -199,7 +201,7 @@ function App() {
 
   const endGame = async () => {
     if (!gameState.id) return;
-    const allPlayers = [...gameState.players, ...(gameState.waitingPlayers || [])].map(p => ({ ...p, isSpy: false }));
+    const allPlayers = [...gameState.players, ...(gameState.waitingPlayers || [])].map(p => ({ ...p, isSpy: false, role: '' }));
     const resetState = {
       ...gameState,
       isPlaying: false,
@@ -211,22 +213,32 @@ function App() {
       currentTurn: null
     };
     await set(ref(db, `games/${gameState.id}`), resetState);
-    if (currentPlayer) setCurrentPlayer({ ...currentPlayer, isSpy: false });
+    if (currentPlayer) setCurrentPlayer({ ...currentPlayer, isSpy: false, role: '' });
     setShowEndGameDialog(false);
     setGameState(resetState);
   };
 
   const startGame = async () => {
     const allPlayers = [...gameState.players, ...(gameState.waitingPlayers || [])];
-    const locations = COUNTRIES[gameState.config.country as keyof typeof COUNTRIES];
-    const location = locations[Math.floor(Math.random() * locations.length)];
+    const locationData = LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)];
+    const location = locationData.location;
 
     const spyIndices = new Set<number>();
     while (spyIndices.size < gameState.config.numSpies) {
       spyIndices.add(Math.floor(Math.random() * allPlayers.length));
     }
 
-    const updatedPlayers = allPlayers.map((p, i) => ({ ...p, isSpy: spyIndices.has(i) }));
+    const availableRoles = [...locationData.roles];
+    const updatedPlayers = allPlayers.map((p, i) => {
+      const isSpy = spyIndices.has(i);
+      let role = '';
+      if (!isSpy && availableRoles.length > 0) {
+        const roleIndex = Math.floor(Math.random() * availableRoles.length);
+        role = availableRoles.splice(roleIndex, 1)[0];
+      }
+      return { ...p, isSpy, role };
+    });
+    
     const firstTurn = updatedPlayers.find(p => p.isLeader)?.id || updatedPlayers[0]?.id || null;
 
     const newState = {
@@ -239,8 +251,6 @@ function App() {
       currentTurn: firstTurn
     };
     await set(ref(db, `games/${gameState.id}`), newState);
-    setGameState(newState);
-    if (currentPlayer) setCurrentPlayer({ ...currentPlayer, isSpy: spyIndices.has(allPlayers.findIndex(p => p.id === currentPlayer.id)) });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
