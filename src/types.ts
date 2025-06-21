@@ -18,6 +18,7 @@ export interface GameState {
   timeRemaining: number;
   location?: string;
   players: Player[];
+  waitingPlayers?: Player[];
   currentTurn?: string;
   votingFor?: string;
   votes: Record<string, boolean>;

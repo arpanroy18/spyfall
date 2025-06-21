@@ -24,6 +24,7 @@ const initialGameState: GameState = {
   isPlaying: false,
   timeRemaining: 480,
   players: [],
+  waitingPlayers: [],
   votes: {},
   config: {
     numSpies: 1,
@@ -122,6 +123,7 @@ function App() {
         ...initialGameState,
         ...gameData,
         players: gameData.players || [],
+        waitingPlayers: gameData.waitingPlayers || [],
         votes: gameData.votes || {},
         currentTurn: gameData.currentTurn || null
       };
@@ -197,8 +199,10 @@ function App() {
             return;
           }
 
-          // Check if current player was kicked
-          if (currentPlayer && !data.players?.some((p: Player) => p.id === currentPlayer.id)) {
+          // Check if current player was kicked (check both players and waitingPlayers)
+          if (currentPlayer && 
+              !data.players?.some((p: Player) => p.id === currentPlayer.id) &&
+              !(data.waitingPlayers || []).some((p: Player) => p.id === currentPlayer.id)) {
             setShowKickDialog(true);
             return;
           }
@@ -215,6 +219,7 @@ function App() {
             ...prev,
             ...data,
             players: data.players || [],
+            waitingPlayers: data.waitingPlayers || [],
             votes: data.votes || {},
             currentTurn: data.currentTurn || null
           }));
@@ -252,10 +257,31 @@ function App() {
 
     const isDuplicateName = gameState.players.some(
       player => player.name.toLowerCase() === trimmedName.toLowerCase()
+    ) || (gameState.waitingPlayers || []).some(
+      player => player.name.toLowerCase() === trimmedName.toLowerCase()
     );
 
     if (isDuplicateName) {
       setNameError('This name is already taken');
+      return;
+    }
+
+    // If game is currently playing, add player to waiting list
+    if (gameState.isPlaying) {
+      const newPlayer: Player = {
+        id: crypto.randomUUID(),
+        name: trimmedName,
+        isLeader: false,
+        score: 0,
+        isSpy: false
+      };
+
+      const updatedWaitingPlayers = [...(gameState.waitingPlayers || []), newPlayer];
+      await set(ref(db, `games/${gameState.id}/waitingPlayers`), updatedWaitingPlayers);
+
+      setCurrentPlayer(newPlayer);
+      setPlayerName('');
+      setNameError('');
       return;
     }
 
@@ -283,26 +309,35 @@ function App() {
 
   const endGame = async () => {
     if (gameState.id) {
-      // Set mission aborted flag for other players to see
-      await set(ref(db, `games/${gameState.id}/missionAborted`), true);
+      // Reset game to lobby state, merging waiting players into main players list
+      const allPlayers = [...gameState.players, ...(gameState.waitingPlayers || [])];
       
-      // Wait a brief moment for other players to see the flag, then remove the game
-      setTimeout(async () => {
-        await set(ref(db, `games/${gameState.id}`), null);
-      }, 1000);
+      const resetGameState = {
+        ...gameState,
+        isPlaying: false,
+        location: undefined,
+        timeRemaining: gameState.config.timeLimit,
+        players: allPlayers,
+        waitingPlayers: [],
+        votes: {},
+        currentTurn: null,
+        missionAborted: undefined
+      };
+
+      await set(ref(db, `games/${gameState.id}`), resetGameState);
       
       setShowEndGameDialog(false);
-      setShowLobby(false);
-      setGameState(initialGameState);
-      setCurrentPlayer(null);
     }
   };
 
   const startGame = async () => {
+    // Merge waiting players into main players list before starting
+    const allPlayers = [...gameState.players, ...(gameState.waitingPlayers || [])];
+    
     const countryLocations = COUNTRIES[gameState.config.country as keyof typeof COUNTRIES];
     const randomLocation = countryLocations[Math.floor(Math.random() * countryLocations.length)];
     
-    const playerIndices = Array.from({ length: gameState.players.length }, (_, i) => i);
+    const playerIndices = Array.from({ length: allPlayers.length }, (_, i) => i);
     const spyIndices = new Set<number>();
     
     for (let i = 0; i < gameState.config.numSpies; i++) {
@@ -311,24 +346,25 @@ function App() {
       playerIndices.splice(randomIndex, 1);
     }
     
-    const firstTurnPlayerId = gameState.players.find(p => p.isLeader)?.id || gameState.players[0]?.id || null;
+    const firstTurnPlayerId = allPlayers.find(p => p.isLeader)?.id || allPlayers[0]?.id || null;
     
     const updatedState = {
       ...gameState,
       isPlaying: true,
       location: randomLocation,
       timeRemaining: gameState.config.timeLimit,
-      players: gameState.players.map((player, index) => ({
+      players: allPlayers.map((player, index) => ({
         ...player,
         isSpy: spyIndices.has(index)
       })),
+      waitingPlayers: [],
       currentTurn: firstTurnPlayerId
     };
 
     await set(ref(db, `games/${gameState.id}`), updatedState);
 
     if (currentPlayer) {
-      const playerIndex = gameState.players.findIndex(p => p.id === currentPlayer.id);
+      const playerIndex = allPlayers.findIndex(p => p.id === currentPlayer.id);
       setCurrentPlayer(prev => prev ? {
         ...prev,
         isSpy: spyIndices.has(playerIndex)
@@ -412,7 +448,7 @@ function App() {
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-black to-gray-900"></div>
       <div className="relative z-10 container mx-auto px-4 py-8">
-        {gameState.isPlaying ? (
+        {gameState.isPlaying && currentPlayer && gameState.players.some(p => p.id === currentPlayer.id) ? (
           <>
             <div className="max-w-6xl mx-auto">
               {currentPlayer && gameState.location && (
@@ -509,35 +545,81 @@ function App() {
                 <div className="ml-4 text-xs text-gray-400 font-mono">MISSION_LOBBY.exe</div>
               </div>
               <div className="pt-4">
-                <h2 className="text-lg font-semibold mb-4 text-red-400 font-mono tracking-wide">AGENT ROSTER</h2>
-                <div className="space-y-2">
-                  <div className="text-sm text-amber-400 mb-3 font-mono">OPERATIVES ({gameState.players.length}/12)</div>
-                  {gameState.players.map(player => (
-                    <div key={player.id} className="flex items-center justify-between bg-black/20 border border-gray-700 p-3 hover:border-red-800 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="text-gray-200 font-mono">{player.name}</span>
-                        {player.isLeader && (
-                          <span className="flex items-center gap-1 text-amber-500 text-sm font-mono border border-amber-700 px-2 py-1 bg-amber-900/20">
-                            <Crown className="w-3.5 h-3.5" />
-                            COMMANDER
-                          </span>
-                        )}
+                {gameState.isPlaying ? (
+                  <>
+                    <h2 className="text-lg font-semibold mb-4 text-red-400 font-mono tracking-wide">MISSION STATUS</h2>
+                    <div className="mb-6 p-4 bg-red-900/20 border border-red-800">
+                      <div className="text-red-400 font-mono text-sm mb-2">OPERATION IN PROGRESS</div>
+                      <div className="text-gray-300 text-sm font-mono">
+                        {gameState.players.length} agents are currently on mission. You will join the next operation.
                       </div>
-                      {currentPlayer?.isLeader && !player.isLeader && (
-                        <button
-                          onClick={() => handleKickPlayer(player.id)}
-                          className="p-2 text-red-400 hover:text-red-300 transition-colors border border-red-800 hover:border-red-600 bg-red-900/20"
-                          aria-label="Remove agent"
-                        >
-                          <UserX className="w-4 h-4" />
-                        </button>
-                      )}
                     </div>
-                  ))}
-                </div>
+                    
+                    <h3 className="text-md font-semibold mb-3 text-amber-400 font-mono tracking-wide">ACTIVE OPERATIVES</h3>
+                    <div className="space-y-2 mb-6">
+                      {gameState.players.map(player => (
+                        <div key={player.id} className="flex items-center gap-3 bg-black/20 border border-gray-700 p-3">
+                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                          <span className="text-gray-200 font-mono">{player.name}</span>
+                          {player.isLeader && (
+                            <span className="flex items-center gap-1 text-amber-500 text-sm font-mono border border-amber-700 px-2 py-1 bg-amber-900/20">
+                              <Crown className="w-3.5 h-3.5" />
+                              COMMANDER
+                            </span>
+                          )}
+                          <span className="text-red-400 text-xs font-mono">ON MISSION</span>
+                        </div>
+                      ))}
+                    </div>
 
-                {canStartGame && hasLeader && isLeader && (
+                    {(gameState.waitingPlayers || []).length > 0 && (
+                      <>
+                        <h3 className="text-md font-semibold mb-3 text-green-400 font-mono tracking-wide">STANDBY AGENTS</h3>
+                        <div className="space-y-2">
+                          {(gameState.waitingPlayers || []).map(player => (
+                            <div key={player.id} className="flex items-center gap-3 bg-black/20 border border-gray-700 p-3">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span className="text-gray-200 font-mono">{player.name}</span>
+                              <span className="text-green-400 text-xs font-mono">READY</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-lg font-semibold mb-4 text-red-400 font-mono tracking-wide">AGENT ROSTER</h2>
+                    <div className="space-y-2">
+                      <div className="text-sm text-amber-400 mb-3 font-mono">OPERATIVES ({gameState.players.length}/12)</div>
+                      {gameState.players.map(player => (
+                        <div key={player.id} className="flex items-center justify-between bg-black/20 border border-gray-700 p-3 hover:border-red-800 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-gray-200 font-mono">{player.name}</span>
+                            {player.isLeader && (
+                              <span className="flex items-center gap-1 text-amber-500 text-sm font-mono border border-amber-700 px-2 py-1 bg-amber-900/20">
+                                <Crown className="w-3.5 h-3.5" />
+                                COMMANDER
+                              </span>
+                            )}
+                          </div>
+                          {currentPlayer?.isLeader && !player.isLeader && (
+                            <button
+                              onClick={() => handleKickPlayer(player.id)}
+                              className="p-2 text-red-400 hover:text-red-300 transition-colors border border-red-800 hover:border-red-600 bg-red-900/20"
+                              aria-label="Remove agent"
+                            >
+                              <UserX className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {canStartGame && hasLeader && isLeader && !gameState.isPlaying && (
                   <button
                     onClick={startGame}
                     className="w-full mt-6 px-4 py-3 bg-red-800 hover:bg-red-700 border border-red-600 text-white font-mono tracking-wide transition-all duration-300 text-lg shadow-lg shadow-red-900/20"
