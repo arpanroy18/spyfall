@@ -16,10 +16,10 @@ export interface GameState {
   id: string;
   isPlaying: boolean;
   timeRemaining: number;
-  location?: string;
+  location?: string | null;
   players: Player[];
   waitingPlayers?: Player[];
-  currentTurn?: string;
+  currentTurn?: string | null;
   votingFor?: string;
   votes: Record<string, boolean>;
   config: GameConfig;

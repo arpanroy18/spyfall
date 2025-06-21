@@ -320,7 +320,7 @@ function App() {
       const resetGameState = {
         ...gameState,
         isPlaying: false,
-        location: undefined,
+        location: null,
         timeRemaining: gameState.config.timeLimit,
         players: resetPlayers,
         waitingPlayers: [],
