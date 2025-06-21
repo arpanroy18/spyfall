@@ -24,6 +24,14 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
     country: 'Canada'
   });
 
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameCodeFromUrl = urlParams.get('game');
+    if (gameCodeFromUrl && gameCodeFromUrl.length === 6) {
+      setGameCode(gameCodeFromUrl.toUpperCase());
+    }
+  }, []);
+
   const handleCreateGame = () => {
     if (!showConfig) {
       setShowConfig(true);

@@ -7,7 +7,7 @@ import { EndGameDialog } from './components/EndGameDialog';
 import { KickDialog } from './components/KickDialog';
 import { MissionAbortedDialog } from './components/MissionAbortedDialog';
 import { Player, GameState, COUNTRIES, GameConfig } from './types';
-import { MapPin, Users, Crown, AlertCircle, XCircle, ArrowLeft, UserX } from 'lucide-react';
+import { MapPin, Users, Crown, AlertCircle, XCircle, ArrowLeft, UserX, Share2, Copy } from 'lucide-react';
 import { ref, set, get, onValue, off } from 'firebase/database';
 import { db } from './firebase';
 
@@ -43,6 +43,26 @@ function App() {
   const [showMissionAbortedDialog, setShowMissionAbortedDialog] = useState(false);
   const [nameError, setNameError] = useState<string>('');
   const [joiningCode, setJoiningCode] = useState<string>('');
+  const [copySuccess, setCopySuccess] = useState<boolean>(false);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameCodeFromUrl = urlParams.get('game');
+    if (gameCodeFromUrl && gameCodeFromUrl.length === 6) {
+      handleJoinGame(gameCodeFromUrl.toUpperCase());
+    }
+  }, []);
+
+  const handleShareLink = async () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?game=${gameState.id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
 
   useEffect(() => {
     if (gameState.isPlaying && gameState.timeRemaining > 0) {
@@ -456,8 +476,25 @@ function App() {
                 <ArrowLeft className="w-6 h-6" />
               </button>
               <h1 className="text-4xl font-bold mb-2 text-red-400 font-mono tracking-wider">SPYFALL</h1>
-              <div className="text-gray-400 font-mono">
+              <div className="text-gray-400 font-mono flex items-center justify-center gap-4">
                 MISSION CODE: <span className="font-mono text-xl text-amber-400 tracking-widest">{gameState.id}</span>
+                <button
+                  onClick={handleShareLink}
+                  className="flex items-center gap-2 px-3 py-1 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-300 hover:text-amber-400 transition-colors font-mono text-sm"
+                  title="Share game link"
+                >
+                  {copySuccess ? (
+                    <>
+                      <Copy className="w-4 h-4 text-green-400" />
+                      COPIED
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-4 h-4" />
+                      SHARE
+                    </>
+                  )}
+                </button>
               </div>
               <div className="h-px bg-gradient-to-r from-transparent via-red-500 to-transparent mt-4"></div>
             </header>
