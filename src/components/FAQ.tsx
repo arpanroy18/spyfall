@@ -8,7 +8,7 @@ const faqItems = [
   },
   {
     question: "How many agents are required?",
-    answer: "Mission requires 4-12 operatives. Each agent must use a secure individual device for communication."
+    answer: "Mission requires 3-12 operatives. Each agent must use a secure individual device for communication."
   },
   {
     question: "How does an operation cycle work?",
