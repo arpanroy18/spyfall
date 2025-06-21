@@ -4,6 +4,7 @@ import { GameState, Player } from '../types';
 import { GameTimer } from './GameTimer';
 import { PlayerCard } from './PlayerCard';
 import { RoleInfo } from './RoleInfo';
+import { LocationGrid } from './LocationGrid';
 
 interface MissionScreenProps {
   gameState: GameState;
@@ -51,7 +52,7 @@ export const MissionScreen: React.FC<MissionScreenProps> = ({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {gameState.players.map(player => (
           <PlayerCard
             key={player.id}
@@ -68,6 +69,8 @@ export const MissionScreen: React.FC<MissionScreenProps> = ({
           />
         ))}
       </div>
+
+      <LocationGrid />
     </div>
   );
 }; 

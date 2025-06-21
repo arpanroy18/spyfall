@@ -25,11 +25,8 @@ const faqItems = [
   {
     question: "How does the enemy spy win?",
     answer: "Enemy operative achieves victory by: maintaining cover until mission timeout, correctly identifying the classified location, or manipulating agents into eliminating an innocent operative."
-  },
-  {
-    question: "How does the scoring system work?",
-    answer: "Enemy Spy: 2 points for successful infiltration, 4 points for location identification or misdirection. Loyal Agents: 1 point for spy elimination, 2 points for the agent who initiated successful counter-intelligence."
   }
+ 
 ];
 
 export function FAQ() {
