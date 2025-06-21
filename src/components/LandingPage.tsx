@@ -73,103 +73,204 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
   };
 
   return (
-    <main className="min-h-screen bg-gray-900 text-white">
-      <div className="container mx-auto px-4 py-8">
-        <header className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 text-purple-400">Play Spyfall Online</h1>
-          <p className="text-xl text-gray-400">Free multiplayer social deduction game - No registration required!</p>
+    <main className="min-h-screen bg-black text-white relative overflow-hidden">
+      {/* Matrix-style background effect */}
+      <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-black to-gray-900"></div>
+      
+      {/* Scanning lines effect */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-red-500 to-transparent animate-pulse"></div>
+        <div className="absolute top-1/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent animate-pulse delay-1000"></div>
+        <div className="absolute top-2/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-red-500 to-transparent animate-pulse delay-2000"></div>
+        <div className="absolute top-3/4 left-0 w-full h-px bg-gradient-to-r from-transparent via-amber-500 to-transparent animate-pulse delay-500"></div>
+      </div>
+
+      {/* Subtle radar sweep effect */}
+      <div className="absolute top-10 right-10 w-32 h-32 opacity-10">
+        <div className="w-full h-full border border-red-500 rounded-full"></div>
+        <div className="absolute top-2 left-2 w-28 h-28 border border-red-500 rounded-full"></div>
+        <div className="absolute top-4 left-4 w-24 h-24 border border-red-500 rounded-full"></div>
+        <div className="absolute top-1/2 left-1/2 w-1 h-16 bg-red-500 origin-bottom transform -translate-x-1/2 animate-spin" style={{animationDuration: '4s'}}></div>
+      </div>
+
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <header className="text-center mb-16">
+          <div className="inline-block">
+            <h1 className="text-7xl font-black mb-4 bg-gradient-to-r from-red-500 via-amber-500 to-red-500 bg-clip-text text-transparent tracking-wider">
+              SPYFALL
+            </h1>
+            <div className="h-px bg-gradient-to-r from-transparent via-red-500 to-transparent mb-6"></div>
+            <div className="text-xs text-red-400/80 font-mono tracking-[0.3em] mb-2">CLASSIFIED</div>
+          </div>
+          <p className="text-xl text-gray-400 font-light tracking-wide">INFILTRATE • DECEIVE • SURVIVE</p>
+          <div className="flex justify-center items-center gap-8 mt-8 text-sm text-gray-500 font-mono">
+            <div className="flex items-center gap-2 border border-gray-800 px-3 py-1 rounded">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              <span>3-12 AGENTS</span>
+            </div>
+            <div className="flex items-center gap-2 border border-gray-800 px-3 py-1 rounded">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse delay-300"></div>
+              <span>5-10 MINUTES</span>
+            </div>
+            <div className="flex items-center gap-2 border border-gray-800 px-3 py-1 rounded">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse delay-700"></div>
+              <span>SECURE ACCESS</span>
+            </div>
+          </div>
         </header>
 
-        <section className="max-w-md mx-auto mb-12" aria-label="game-controls">
-          {showConfig ? (
-            <div className="space-y-6">
-              <GameConfigPanel config={config} onConfigChange={setConfig} />
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  value={playerName}
-                  onChange={(e) => {
-                    setPlayerName(e.target.value);
-                    setNameError('');
-                  }}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Enter your name"
-                  className={`w-full px-4 py-3 rounded-lg bg-gray-800 text-white placeholder-gray-500 
-                    focus:outline-none focus:ring-2 focus:ring-purple-500 border
-                    ${nameError ? 'border-red-500' : 'border-gray-700'}`}
-                />
-                {nameError && (
-                  <div className="text-red-400 text-sm">{nameError}</div>
-                )}
-                <button
-                  onClick={handleCreateGame}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors text-lg font-medium"
-                >
-                  <Plus className="w-5 h-5" />
-                  Create Game
-                </button>
+        <section className="max-w-lg mx-auto mb-16" aria-label="game-controls">
+          <div className="bg-gray-900/90 backdrop-blur-sm border-2 border-red-900/50 rounded-lg p-8 shadow-2xl shadow-red-900/20 relative">
+            {/* Terminal-style header */}
+            <div className="absolute top-0 left-0 right-0 h-8 bg-gray-800 border-b border-red-900/50 rounded-t-lg flex items-center px-4">
+              <div className="flex gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
+              <div className="ml-4 text-xs text-gray-400 font-mono">SECURE_TERMINAL.exe</div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              <button
-                onClick={handleCreateGame}
-                className="flex items-center justify-center gap-3 px-6 py-4 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors text-lg font-medium"
-              >
-                <Plus className="w-5 h-5" />
-                Create New Game
-              </button>
-
-              <div className="relative">
-                <input
-                  type="text"
-                  value={gameCode}
-                  onChange={(e) => {
-                    setGameCode(e.target.value.toUpperCase());
-                    setGameCodeError('');
-                  }}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Enter Game Code"
-                  className={`w-full px-6 py-4 bg-gray-800 rounded-lg text-white placeholder-gray-500 
-                    focus:outline-none focus:ring-2 focus:ring-purple-500 
-                    ${gameCodeError ? 'border-red-500' : 'border-gray-600/50'}`}
-                />
-                {gameCodeError && (
-                  <div className="absolute -bottom-6 left-0 text-red-400 text-sm">
-                    {gameCodeError}
+            
+            <div className="pt-4">
+              {showConfig ? (
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold mb-2 text-red-400 font-mono tracking-wide">MISSION PARAMETERS</h3>
+                    <p className="text-gray-500 text-sm font-mono">Configure operational details</p>
                   </div>
-                )}
-                <button
-                  onClick={() => gameCode && handleJoinAttempt(gameCode)}
-                  disabled={!gameCode}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 
-                    rounded-lg hover:bg-blue-700 transition-colors
-                    disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <LogIn className="w-5 h-5" />
-                </button>
-              </div>
+                  <GameConfigPanel config={config} onConfigChange={setConfig} />
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      value={playerName}
+                      onChange={(e) => {
+                        setPlayerName(e.target.value);
+                        setNameError('');
+                      }}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Enter codename"
+                      className={`w-full px-4 py-3 bg-black/50 border text-white placeholder-gray-500 font-mono
+                        focus:outline-none focus:ring-1 transition-all duration-300
+                        ${nameError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-amber-500 hover:border-gray-600'}`}
+                    />
+                    {nameError && (
+                      <div className="text-red-400 text-sm font-mono">{nameError}</div>
+                    )}
+                    <button
+                      onClick={handleCreateGame}
+                      className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-red-800 hover:bg-red-700 border border-red-600 text-white font-mono tracking-wide transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-900/20"
+                    >
+                      <Plus className="w-4 h-4" />
+                      INITIATE MISSION
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="text-center mb-8">
+                    <h3 className="text-xl font-bold mb-2 text-red-400 font-mono tracking-wide">ACCESS TERMINAL</h3>
+                    <p className="text-gray-500 text-sm font-mono">Select operation mode</p>
+                  </div>
+                  
+                  <button
+                    onClick={handleCreateGame}
+                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-red-800 hover:bg-red-700 border border-red-600 text-white font-mono tracking-wide transition-all duration-300 transform hover:scale-105 shadow-lg shadow-red-900/20"
+                  >
+                    <Plus className="w-5 h-5" />
+                    CREATE NEW GAME
+                  </button>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-700"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-4 bg-gray-900 text-gray-500 font-mono">OR</span>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={gameCode}
+                      onChange={(e) => {
+                        setGameCode(e.target.value.toUpperCase());
+                        setGameCodeError('');
+                      }}
+                      onKeyPress={handleKeyPress}
+                      placeholder="ENTER ACCESS CODE"
+                      className={`w-full px-4 py-3 pr-12 bg-black/50 border text-white placeholder-gray-500 font-mono tracking-widest text-center
+                        focus:outline-none focus:ring-1 transition-all duration-300
+                        ${gameCodeError ? 'border-red-500 focus:ring-red-500' : 'border-gray-700 focus:ring-amber-500 hover:border-gray-600'}`}
+                    />
+                    {gameCodeError && (
+                      <div className="absolute -bottom-6 left-0 text-red-400 text-sm font-mono">
+                        {gameCodeError}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => gameCode && handleJoinAttempt(gameCode)}
+                      disabled={!gameCode}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 p-2 bg-amber-700 hover:bg-amber-600 border border-amber-600 text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-amber-700"
+                    >
+                      <LogIn className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </section>
 
-        <section className="text-center mb-12">
-          <article className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">About Spyfall</h2>
-            <p className="text-gray-300">
-              Spyfall is an exciting party game where players must use their deduction and deception skills. 
-              One player becomes the spy who must figure out their location, while others try to identify the spy 
-              without revealing too much information.
-            </p>
-          </article>
+        <section className="text-center mb-16">
+          <div className="max-w-4xl mx-auto">
+            <article className="mb-12">
+              <h2 className="text-3xl font-bold mb-6 text-red-400 font-mono tracking-wider">
+                MISSION BRIEFING
+              </h2>
+              <div className="bg-gray-900/50 border border-gray-700 p-6 font-mono text-left text-gray-300 max-w-2xl mx-auto">
+                <div className="text-xs text-amber-400 mb-2">CLASSIFIED - EYES ONLY</div>
+                <p className="leading-relaxed">
+                  An enemy operative has infiltrated your location. One agent among you is the <span className="text-red-400 font-bold">SPY</span> - 
+                  they must identify the location without being discovered. The remaining agents must expose the spy 
+                  through careful questioning while avoiding giving away critical intelligence.
+                </p>
+                <div className="text-xs text-gray-500 mt-4 text-right">STATUS: ACTIVE • CLEARANCE LEVEL: RED</div>
+              </div>
+            </article>
 
-          <button
-            onClick={() => setShowFAQ(!showFAQ)}
-            className="text-purple-400 hover:text-purple-300 transition-colors text-lg flex items-center gap-2 mx-auto"
-          >
-            <Users className="w-5 h-5" />
-            {showFAQ ? 'Hide How to Play' : 'Show How to Play'}
-          </button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              <div className="bg-gray-900/50 border border-red-900/50 p-6 shadow-lg">
+                <div className="w-12 h-12 bg-red-800 border border-red-600 flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-6 h-6 text-red-400" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2 text-red-400 font-mono">PSYCHOLOGICAL OPS</h3>
+                <p className="text-gray-400 text-sm">Deploy deception and counter-intelligence tactics</p>
+              </div>
+              <div className="bg-gray-900/50 border border-amber-900/50 p-6 shadow-lg">
+                <div className="w-12 h-12 bg-amber-800 border border-amber-600 flex items-center justify-center mx-auto mb-4">
+                  <Plus className="w-6 h-6 text-amber-400" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2 text-amber-400 font-mono">RAPID DEPLOYMENT</h3>
+                <p className="text-gray-400 text-sm">Quick setup for immediate operational readiness</p>
+              </div>
+              <div className="bg-gray-900/50 border border-green-900/50 p-6 shadow-lg">
+                <div className="w-12 h-12 bg-green-800 border border-green-600 flex items-center justify-center mx-auto mb-4">
+                  <LogIn className="w-6 h-6 text-green-400" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2 text-green-400 font-mono">SECURE ACCESS</h3>
+                <p className="text-gray-400 text-sm">Encrypted channels with no trace protocols</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowFAQ(!showFAQ)}
+              className="inline-flex items-center gap-3 px-6 py-3 bg-gray-800 border border-gray-600 hover:border-red-600 hover:bg-gray-700 transition-all duration-300 font-mono tracking-wide text-gray-300 hover:text-red-400 shadow-lg"
+            >
+              <Users className="w-5 h-5" />
+              {showFAQ ? 'HIDE BRIEFING' : 'VIEW BRIEFING'}
+            </button>
+          </div>
         </section>
 
         {showFAQ && <FAQ />}
