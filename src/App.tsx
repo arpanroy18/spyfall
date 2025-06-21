@@ -194,10 +194,9 @@ function App() {
         const data = snapshot.val();
         if (data) {
           // Check if mission was aborted by leader
-          if (data.missionAborted && currentPlayer && !currentPlayer.isLeader) {
-            setShowMissionAbortedDialog(true);
-            return;
-          }
+          // Since we now reset to lobby instead of deleting the game,
+          // we don't need to show the mission aborted dialog
+          // Players will automatically see the lobby when the game resets
 
           // Check if current player was kicked (check both players and waitingPlayers)
           if (currentPlayer && 
@@ -312,21 +311,39 @@ function App() {
       // Reset game to lobby state, merging waiting players into main players list
       const allPlayers = [...gameState.players, ...(gameState.waitingPlayers || [])];
       
+      // Reset spy status for all players
+      const resetPlayers = allPlayers.map(player => ({
+        ...player,
+        isSpy: false
+      }));
+      
       const resetGameState = {
         ...gameState,
         isPlaying: false,
         location: undefined,
         timeRemaining: gameState.config.timeLimit,
-        players: allPlayers,
+        players: resetPlayers,
         waitingPlayers: [],
         votes: {},
-        currentTurn: null,
-        missionAborted: undefined
+        currentTurn: null
       };
 
       await set(ref(db, `games/${gameState.id}`), resetGameState);
       
+      // Update current player's spy status locally
+      if (currentPlayer) {
+        setCurrentPlayer(prev => prev ? {
+          ...prev,
+          isSpy: false
+        } : null);
+      }
+      
+      // Close the dialog and update local state immediately to ensure UI updates
       setShowEndGameDialog(false);
+      
+      // Update local game state to match what we just wrote to Firebase
+      // This ensures immediate UI update without waiting for Firebase listener
+      setGameState(resetGameState);
     }
   };
 
@@ -365,10 +382,13 @@ function App() {
 
     if (currentPlayer) {
       const playerIndex = allPlayers.findIndex(p => p.id === currentPlayer.id);
-      setCurrentPlayer(prev => prev ? {
-        ...prev,
-        isSpy: spyIndices.has(playerIndex)
-      } : null);
+      const updatedPlayer = allPlayers.find(p => p.id === currentPlayer.id);
+      if (updatedPlayer) {
+        setCurrentPlayer({
+          ...updatedPlayer,
+          isSpy: spyIndices.has(playerIndex)
+        });
+      }
     }
   };
 
