@@ -5,6 +5,7 @@ import { GameTimer } from './GameTimer';
 import { PlayerCard } from './PlayerCard';
 import { RoleInfo } from './RoleInfo';
 import { LocationGrid } from './LocationGrid';
+import { QuestionCard } from './QuestionCard';
 
 interface MissionScreenProps {
   gameState: GameState;
@@ -50,6 +51,10 @@ export const MissionScreen: React.FC<MissionScreenProps> = ({
             ABORT MISSION
           </button>
         )}
+      </div>
+
+      <div className="mb-6">
+        <QuestionCard />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
