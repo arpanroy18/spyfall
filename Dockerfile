@@ -26,11 +26,8 @@ RUN npm install -g serve@14.2.4
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Expose port
-EXPOSE 3000
+# Expose the port that Railway will set
+EXPOSE $PORT
 
-# Set environment variable for port
-ENV PORT=3000
-
-# Serve the built files with SPA routing support
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Serve the built files with SPA routing support using Railway's PORT
+CMD sh -c "serve -s dist -l ${PORT:-3000}"
