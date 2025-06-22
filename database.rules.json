@@ -1,0 +1,53 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "games": {
+      "$gameId": {
+        ".read": true,
+        ".write": true,
+        ".validate": "newData.hasChildren(['id', 'players', 'isPlaying', 'timeRemaining', 'config']) && newData.child('id').val() === $gameId",
+        "id": {
+          ".validate": "newData.isString() && newData.val().length === 6"
+        },
+        "players": {
+          ".validate": "newData.hasChildren()",
+          "$index": {
+            ".validate": "newData.hasChildren(['id', 'name', 'score']) && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 20 && newData.child('score').isNumber() && newData.child('id').isString()"
+          }
+        },
+        "waitingPlayers": {
+          "$index": {
+            ".validate": "newData.hasChildren(['id', 'name', 'score']) && newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 20"
+          }
+        },
+        "isPlaying": {
+          ".validate": "newData.isBoolean()"
+        },
+        "timeRemaining": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3600"
+        },
+        "location": {
+          ".validate": "newData.isString() || newData.val() === null"
+        },
+        "currentTurn": {
+          ".validate": "newData.isString() || newData.val() === null"
+        },
+        "votes": {
+          "$key": {
+            ".validate": "newData.isBoolean()"
+          }
+        },
+        "config": {
+          ".validate": "newData.hasChildren(['numSpies', 'timeLimit'])",
+          "numSpies": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 5"
+          },
+          "timeLimit": {
+            ".validate": "newData.isNumber() && newData.val() >= 60 && newData.val() <= 3600"
+          }
+        }
+      }
+    }
+  }
+}

@@ -65,7 +65,6 @@ export function LandingPage({ onCreateGame, onJoinGame }: LandingPageProps) {
       onJoinGame(code);
     } catch (error) {
       setGameCodeError('Error joining game');
-      console.error('Error checking game:', error);
     }
   };
 

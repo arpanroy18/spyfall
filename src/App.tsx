@@ -113,7 +113,7 @@ function App() {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
-      console.error('Failed to copy link:', err);
+      // Failed to copy link
     }
   };
 
@@ -144,7 +144,6 @@ function App() {
       setGameState({ ...initialGameState, ...data, players: data.players || [], waitingPlayers: data.waitingPlayers || [] });
       setShowLobby(true);
     } catch (e) {
-      console.error(e);
       setNameError('Error joining game');
     }
   };
