@@ -1,93 +1,156 @@
-# 🕵️ Spyfall Online
+# Spyfall
 
-![Spyfall Online Logo/Screenshot Placeholder](placeholder-image.png)
+A real-time multiplayer web implementation of the social deduction game Spyfall, built with React, TypeScript, and Firebase.
 
-**Play Spyfall with friends online!** No registration, completely free, and open source.
+![Demo](https://github.com/arpanroy18/spyfall/blob/88360740f2fcd2e6b71c3e3214fa289970c289e7/public/Spyfall-Demo.gif)
 
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Built with React](https://img.shields.io/badge/Built%20with-React-blue.svg)](https://reactjs.org/)
-[![Styled with Tailwind CSS](https://img.shields.io/badge/Styled%20with-TailwindCSS-teal.svg)](https://tailwindcss.com/)
-[![Powered by Firebase](https://img.shields.io/badge/Powered%20by-Firebase-orange.svg)](https://firebase.google.com/)
+## Overview
 
----
+This project implements the Spyfall game mechanics in a web application with real-time multiplayer capabilities. Players are assigned roles at specific locations, with one player designated as the spy who must identify the location while other players try to identify the spy through strategic questioning.
 
-## 📖 Table of Contents
-- [About](#-about)
-- [Features](#-features)
-- [Getting Started](#-getting-started)
-- [Usage](#-usage)
-- [Code Structure](#-code-structure)
-- [Technologies Used](#-technologies-used)
-- [Contributing](#-contributing)
-- [License](#-license)
+## Tech Stack
 
----
+- **Frontend**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS
+- **Backend**: Firebase Realtime Database
+- **Icons**: Lucide React
+- **Build Tool**: Vite
+- **Linting**: ESLint
 
-## 🎮 About
-**Spyfall Online** is a free and open-source web application that lets you play the popular social deduction party game, **Spyfall**, with your friends online. Built using **React**, **TypeScript**, **Tailwind CSS**, and **Firebase**.
+## Project Structure
 
----
+```
+src/
+├── components/          # React components
+│   ├── AuthorizationScreen.tsx
+│   ├── EndGameDialog.tsx
+│   ├── FAQ.tsx
+│   ├── GameConfig.tsx
+│   ├── GameConfigPanel.tsx
+│   ├── GameTimer.tsx
+│   ├── KickDialog.tsx
+│   ├── LandingPage.tsx
+│   ├── LobbyScreen.tsx
+│   ├── LocationCard.tsx
+│   ├── LocationGrid.tsx
+│   ├── MissionAbortedDialog.tsx
+│   ├── MissionScreen.tsx
+│   ├── PlayerCard.tsx
+│   ├── QuestionCard.tsx
+│   └── RoleInfo.tsx
+├── data/               # Game data and configurations
+├── firebase.ts         # Firebase configuration
+├── hooks/              # Custom React hooks
+├── types.ts            # TypeScript type definitions
+├── utils/              # Utility functions
+│   └── locationImages.ts
+├── App.tsx             # Main application component
+└── main.tsx           # Application entry point
+```
 
-## ✨ Features
-- Real-time Multiplayer (up to 12 players)
-- Custom game configurations
-- Multiple region-based locations
-- In-game timer and role management
-- Mobile-responsive design
-- Free and open source
+## Core Features
 
----
+### Game State Management
+- Real-time synchronization using Firebase Realtime Database
+- Centralized game state with TypeScript interfaces
+- Player role assignment and spy detection logic
+- Timer management with automatic game progression
 
-## 🚀 Getting Started
+### Multiplayer Architecture
+- Room-based game sessions with unique 6-character codes
+- Real-time player synchronization
+- Leader-based game control
+- Player kick functionality
 
+### Game Logic
+- Dynamic location and role assignment
+- Turn-based questioning system
+- Voting mechanism for spy identification
+- Automatic game termination conditions
 
-### ✅ Prerequisites
-- Node.js v18+
+## Data Models
+
+### Player Interface
+```typescript
+interface Player {
+  id: string;
+  name: string;
+  isSpy?: boolean;
+  isLeader?: boolean;
+  role?: string;
+  score: number;
+}
+```
+
+### Game State Interface
+```typescript
+interface GameState {
+  id: string;
+  isPlaying: boolean;
+  timeRemaining: number;
+  location?: string | null;
+  players: Player[];
+  waitingPlayers?: Player[];
+  currentTurn?: string | null;
+  votingFor?: string;
+  votes: Record<string, boolean>;
+  config: GameConfig;
+}
+```
+
+## Development
+
+### Prerequisites
+- Node.js 18+
 - npm or yarn
 
-### 📥 Installation
+### Installation
 ```bash
-git clone <your-repository-url>
+git clone <repository-url>
 cd spyfall
-npm install  # or yarn install
-```
-
-### ▶️ Running the Server
-```bash
-# Using npm
 npm install
-
-# OR using yarn
-yarn install
 ```
 
-### 🎲 Usage
-🔹 Creating a Game
-- Open the application in your browser.
-- Click "Create New Game" on the landing page.
-- Configure your game settings:
-- Region for locations.
-- Number of Spies.
-- Time Limit for each round.
-Enter your name and click "Create Game".
-Share the Game Code displayed at the top with friends.
-When all players have joined, the leader (crown icon) clicks "Start Game".
+### Development Server
+```bash
+npm run dev
+```
 
-### 🔹 Joining a Game
-Open the application in your browser.
-Enter the Game Code provided by the host.
-Click the Join button or press Enter.
-Enter your name and click "Join Game".
-Wait in the lobby until the leader starts the game.
-🔹 Playing the Game
-Roles are assigned at the start.
-Non-spies see the location.
-The spy does not and must figure it out.
-Players take turns questioning each other.
-Questioning round:
-Players ask indirect questions to identify the spy.
-The spy must blend in without revealing they don't know the location.
-Game ends when:
-A vote to accuse a player as the spy succeeds.
-The time runs out and the spy guesses the location.
-The wrong player is indicted, giving the spy the win.
+### Build
+```bash
+npm run build
+```
+
+### Linting
+```bash
+npm run lint
+```
+
+## Firebase Configuration
+
+The application uses Firebase Realtime Database for:
+- Game state persistence
+- Real-time player synchronization
+- Room management
+- Player authentication (anonymous)
+
+Database rules are configured in `database.rules.json` to ensure secure access patterns.
+
+## Deployment
+
+The project includes configuration for:
+- **Railway**: `railway.json` for Railway deployment
+- **Firebase Hosting**: `firebase.json` for Firebase hosting
+- **Docker**: `Dockerfile` for containerized deployment
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+MIT License
